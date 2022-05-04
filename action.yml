@@ -1,0 +1,12 @@
+name: 'Create release from NPM workspaces changelogs'
+description: 'Automatically create draft releases depending on the CHANGELOG.md files of each npm workspace of the repo.'
+inputs:
+  github-auth-token:  
+    description: 'The GitHub auth token'
+    required: true
+outputs:
+  response: # id of output
+    description: 'The result of the operation'
+runs:
+  using: 'node12'
+  main: 'dist/index.js'
