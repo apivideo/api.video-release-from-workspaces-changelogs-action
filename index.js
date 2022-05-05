@@ -36,7 +36,7 @@ async function getVersionsFromChangelog(changelogFilePath) {
     return versions;
 }
 
-function listWorkspaces(path) {
+function listWorkspaces(path, suffixToIgnore) {
     return new Promise((resolve, reject) => glob(path, (err, files1) => {
         if (err) {
             reject(err);
@@ -48,8 +48,8 @@ function listWorkspaces(path) {
 
                     if (fs.existsSync(changeLogPath) && fs.existsSync(packageJsonPath)) {
                         let packageName = JSON.parse(fs.readFileSync(packageJsonPath)).name;
-                        if (packageName && packageName.indexOf("@") === 0) {
-                            packageName = packageName.substring(1);
+                        if (packageName && suffixToIgnore.length() > 0 && packageName.indexOf(suffixToIgnore) === 0) {
+                            packageName = packageName.substring(suffixToIgnore.length);
                         }
                         return ({
                             package: packageName,
@@ -61,7 +61,7 @@ function listWorkspaces(path) {
     }));
 }
 
-async function findNpmWorkspacesChangelogs(changelogFilePath) {
+async function findNpmWorkspacesChangelogs(suffixToIgnore) {
     let packageJson;
     try {
         packageJson = JSON.parse(fs.readFileSync("package.json"));
@@ -73,7 +73,7 @@ async function findNpmWorkspacesChangelogs(changelogFilePath) {
         throw new Error(`No workspace found in package.json`);
     }
 
-    const res = await Promise.all(packageJson.workspaces.map(w => listWorkspaces(w)));
+    const res = await Promise.all(packageJson.workspaces.map(w => listWorkspaces(w, suffixToIgnore)));
 
     let files = [];
     res.forEach(rr => {
@@ -89,6 +89,7 @@ async function findNpmWorkspacesChangelogs(changelogFilePath) {
 (async () => {
     try {
         const githubAuthToken = core.getInput('github-auth-token', { required: true });
+        const suffixToIgnore = core.getInput('package-name-suffix-to-ignore', { required: false });
 
         const octokit = github.getOctokit(githubAuthToken);
 
@@ -104,7 +105,7 @@ async function findNpmWorkspacesChangelogs(changelogFilePath) {
 
 
 
-        const changelogs = await findNpmWorkspacesChangelogs("CHANGELOG.md");
+        const changelogs = await findNpmWorkspacesChangelogs(suffixToIgnore);
         changelogs.forEach(async (c) => {
             const changelogVersions = await getVersionsFromChangelog(c.changelog);
             const lastChangelogVersion = Object.keys(changelogVersions)[0];
